@@ -1,0 +1,11 @@
+venv/
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+*.xlsx
+*.png
+cftc_xls_all/
+cftc_zips/
+cftc_plots_percentile/
+.first_run_done

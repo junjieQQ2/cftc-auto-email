@@ -1,0 +1,24 @@
+name: SLV RSI Weekly Report
+
+on:
+  schedule:
+    # 每周六 06:10 北京时间 = 每周五 22:10 UTC
+    - cron: '10 22 * * 5'
+  workflow_dispatch:
+
+jobs:
+  run-slv-rsi:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run SLV RSI analysis and send email
+        run: python slv_rsi_main.py
+        env:
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}

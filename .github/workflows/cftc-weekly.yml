@@ -1,0 +1,24 @@
+name: CFTC Weekly Report
+
+on:
+  schedule:
+    # 每周六 06:00 北京时间 = 每周五 22:00 UTC
+    - cron: '0 22 * * 5'
+  workflow_dispatch:
+
+jobs:
+  run-cftc:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run CFTC analysis and send email
+        run: python weekly_cftc_combined_percentile_with_email.py
+        env:
+          EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
+          EMAIL_TO: ${{ secrets.EMAIL_TO }}
+          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
