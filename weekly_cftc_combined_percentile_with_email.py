@@ -369,26 +369,45 @@ def generate_plots():
     if not OUTPUT_EXCEL.exists():
         print("Excel 文件不存在，跳过图表生成")
         return
+
     xl = pd.ExcelFile(OUTPUT_EXCEL, engine='openpyxl')
-    legend_elements = [mpatches.Patch(color='darkred', label='≥80%'), mpatches.Patch(color='orange', label='50–79%'),
-                       mpatches.Patch(color='blue', label='20–49%'), mpatches.Patch(color='darkgreen', label='≤20%')]
+
+    legend_elements = [
+        mpatches.Patch(color='darkred', label='≥80% Extreme Bullish'),
+        mpatches.Patch(color='orange', label='50–79% Strong Bullish'),
+        mpatches.Patch(color='blue', label='20–49% Weak Bearish'),
+        mpatches.Patch(color='darkgreen', label='≤20% Extreme Bearish')
+    ]
+
     for metal in ["Gold", "Silver", "Platinum"]:
-        if metal not in xl.sheet_names: continue
+        if metal not in xl.sheet_names:
+            continue
+
         df = xl.parse(metal)
         df['Report_Date'] = pd.to_datetime(df['Report_Date'], errors='coerce')
         df = df.dropna(subset=['Report_Date']).sort_values('Report_Date')
+
+        latest_date = df['Report_Date'].max()
+
+        # ===== Full History =====
         fig, axes = plt.subplots(6, 1, figsize=(15, 26), sharex=True, gridspec_kw={'height_ratios': [1]*6})
-        fig.suptitle(f"{metal} Historical Percentiles & Spot Price", fontsize=16, fontweight='bold')
+        fig.suptitle(f"{metal} Historical Percentiles & Spot Price (Full History)", fontsize=16, fontweight='bold')
+
         ax_price = axes[0]
         if 'close' in df.columns and not df['close'].isna().all():
             ax_price.plot(df['Report_Date'], df['close'], color='black', lw=1.5)
             ax_price.set_ylabel('Spot Price')
             ax_price.grid(True, alpha=0.3)
+        else:
+            ax_price.text(0.5, 0.5, "No close data", ha='center', va='center')
+
         for i, cat in enumerate(CATEGORIES):
             ax = axes[i + 1]
             col = f"{cat}_Pct_OI_Percentile"
             if col not in df.columns or df[col].isna().all():
+                ax.text(0.5, 50, "No data", ha='center', va='center')
                 continue
+
             colors = ['darkred' if v >= 80 else 'orange' if 50 <= v < 80 else 'blue' if 20 <= v < 50 else 'darkgreen' for v in df[col]]
             ax.scatter(df['Report_Date'], df[col], c=colors, s=40, alpha=0.8)
             ax.axhline(80, color="darkred", ls=":")
@@ -398,12 +417,104 @@ def generate_plots():
             ax.set_ylabel(f"{cat} (%)")
             ax.grid(True, alpha=0.3)
             ax.set_ylim(0, 100)
-        fig.legend(handles=legend_elements, loc='lower center', bbox_to_anchor=(0.5, -0.02), ncol=1, fontsize=9)
+
+        fig.legend(handles=legend_elements, loc='lower center', bbox_to_anchor=(0.5, -0.02), ncol=1,
+                   fontsize=9, title="Color Legend (Percentile Thresholds)", frameon=True)
         axes[-1].xaxis.set_major_formatter(DateFormatter('%Y-%m'))
         plt.xticks(rotation=45)
         fig.tight_layout(rect=[0, 0.05, 1, 0.92])
         plt.savefig(OUTPUT_FOLDER / f"{metal}_Historical_Percentiles.png", dpi=180, bbox_inches='tight')
         plt.close(fig)
+
+        # ===== 2014-2020 =====
+        sheet_name = f"{metal}_2014_2020"
+        if sheet_name in xl.sheet_names:
+            df_1420 = xl.parse(sheet_name)
+            df_1420['Report_Date'] = pd.to_datetime(df_1420['Report_Date'], errors='coerce')
+            df_1420 = df_1420.dropna(subset=['Report_Date']).sort_values('Report_Date')
+            df_1420 = df_1420[(df_1420['Report_Date'] >= '2014-01-01') & (df_1420['Report_Date'] <= '2020-12-31')]
+
+            if not df_1420.empty:
+                fig, axes = plt.subplots(6, 1, figsize=(15, 26), sharex=True, gridspec_kw={'height_ratios': [1]*6})
+                fig.suptitle(f"{metal} 2014-2020 Historical Percentiles & Spot Price", fontsize=16, fontweight='bold')
+
+                ax_price = axes[0]
+                if 'close' in df_1420.columns and not df_1420['close'].isna().all():
+                    ax_price.plot(df_1420['Report_Date'], df_1420['close'], color='black', lw=1.5)
+                    ax_price.set_ylabel('Spot Price')
+                    ax_price.grid(True, alpha=0.3)
+                else:
+                    ax_price.text(0.5, 0.5, "No close data (2014-2020)", ha='center', va='center')
+
+                for i, cat in enumerate(CATEGORIES):
+                    ax = axes[i + 1]
+                    col = f"{cat}_Pct_OI_Percentile"
+                    if col not in df_1420.columns or df_1420[col].isna().all():
+                        ax.text(0.5, 50, "No data", ha='center', va='center')
+                        continue
+
+                    colors = ['darkred' if v >= 80 else 'orange' if 50 <= v < 80 else 'blue' if 20 <= v < 50 else 'darkgreen' for v in df_1420[col]]
+                    ax.scatter(df_1420['Report_Date'], df_1420[col], c=colors, s=40, alpha=0.8)
+                    ax.axhline(80, color="darkred", ls=":")
+                    ax.axhline(50, color="orange", ls=":")
+                    ax.axhline(20, color="blue", ls=":")
+                    ax.axhline(50, color="gray", ls="--")
+                    ax.set_ylabel(f"{cat} (%)")
+                    ax.grid(True, alpha=0.3)
+                    ax.set_ylim(0, 100)
+
+                fig.legend(handles=legend_elements, loc='lower center', bbox_to_anchor=(0.5, -0.02), ncol=1,
+                           fontsize=9, title="Color Legend (Percentile Thresholds)", frameon=True)
+                axes[-1].xaxis.set_major_formatter(DateFormatter('%Y-%m'))
+                plt.xticks(rotation=45)
+                fig.tight_layout(rect=[0, 0.05, 1, 0.92])
+                plt.savefig(OUTPUT_FOLDER / f"{metal}_2014_2020_Historical_Percentiles.png", dpi=180, bbox_inches='tight')
+                plt.close(fig)
+
+        # ===== Per-period plots (1Y, 3Y, 5Y, 10Y) =====
+        for period, delta in TIME_PERIODS.items():
+            if delta is None:
+                continue
+            period_start = latest_date - delta
+            period_df = df[df['Report_Date'] >= period_start].copy()
+
+            fig, axes = plt.subplots(6, 1, figsize=(15, 26), sharex=True, gridspec_kw={'height_ratios': [1]*6})
+            fig.suptitle(f"{metal} — {period} Percentiles & Spot Price", fontsize=16, fontweight='bold')
+
+            ax_price = axes[0]
+            if 'close' in period_df.columns and not period_df['close'].isna().all():
+                ax_price.plot(period_df['Report_Date'], period_df['close'], color='black', lw=1.5)
+                ax_price.set_ylabel('Spot Price')
+                ax_price.grid(True, alpha=0.3)
+            else:
+                ax_price.text(0.5, 0.5, "No close data", ha='center', va='center')
+
+            for i, cat in enumerate(CATEGORIES):
+                ax = axes[i + 1]
+                col = f"{cat}_{period}_Pct_OI_Percentile"
+                if col not in period_df.columns or period_df[col].isna().all():
+                    ax.text(0.5, 50, "No data", ha='center', va='center')
+                    continue
+
+                ax.plot(period_df['Report_Date'], period_df[col], color='black', lw=1.2)
+                colors = ['darkred' if v >= 80 else 'orange' if 50 <= v < 80 else 'blue' if 20 <= v < 50 else 'darkgreen' for v in period_df[col]]
+                ax.scatter(period_df['Report_Date'], period_df[col], c=colors, s=40, alpha=0.8)
+
+                ax.axhline(80, color="darkred", ls=":")
+                ax.axhline(50, color="orange", ls=":")
+                ax.axhline(20, color="blue", ls=":")
+                ax.axhline(50, color="gray", ls="--")
+                ax.set_ylabel(f"{cat} (%)")
+                ax.grid(True, alpha=0.3)
+                ax.set_ylim(0, 100)
+
+            fig.legend(handles=legend_elements, loc='lower center', bbox_to_anchor=(0.5, -0.02), ncol=1, fontsize=9)
+            axes[-1].xaxis.set_major_formatter(DateFormatter('%Y-%m'))
+            plt.xticks(rotation=45)
+            fig.tight_layout(rect=[0, 0.05, 1, 0.92])
+            plt.savefig(OUTPUT_FOLDER / f"{metal}_{period}_Percentiles.png", dpi=180, bbox_inches='tight')
+            plt.close(fig)
+
     print("图表生成完成")
 
 def backtest_analysis():
