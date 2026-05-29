@@ -14,34 +14,25 @@ from .config import (
 )
 
 
-# ====================== 获取价格数据 ======================
+# ====================== 获取价格数据（美元计价） ======================
 def fetch_precious_metals_prices():
+    """获取黄金 (XAU)、白银 (XAG)、铂金 (XPT) 国际现货美元价格"""
     print("AKShare 版本:", ak.__version__)
     price_dfs = {}
-    column_rename = {'日期': 'date', '收盘价': 'close'}
+    symbol_map = [("XAU", "Gold"), ("XAG", "Silver"), ("XPT", "Platinum")]
 
-    for symbol, metal in [("AU0", "Gold"), ("AG0", "Silver")]:
+    for symbol, metal in symbol_map:
         try:
-            df = ak.futures_main_sina(symbol=symbol)
-            df = df.rename(columns=column_rename)
-            if 'date' in df.columns and 'close' in df.columns:
+            df = ak.futures_foreign_hist(symbol=symbol)
+            date_col = next((c for c in df.columns if 'date' in c.lower()), None)
+            close_col = next((c for c in df.columns if 'close' in c.lower() or 'settle' in c.lower()), None)
+            if date_col and close_col:
+                df = df.rename(columns={date_col: 'date', close_col: 'close'})
                 df['date'] = pd.to_datetime(df['date'])
                 price_dfs[metal] = df[['date', 'close']].sort_values('date').set_index('date')
-                print(f"✓ {metal} 价格数据加载成功")
+                print(f"✓ {metal} 价格数据加载成功 (USD)")
         except Exception as e:
             print(f"{metal} price failed: {e}")
-
-    try:
-        df = ak.futures_foreign_hist(symbol="XPT")
-        date_col = next((c for c in df.columns if 'date' in c.lower()), None)
-        close_col = next((c for c in df.columns if 'close' in c.lower() or 'settle' in c.lower()), None)
-        if date_col and close_col:
-            df = df.rename(columns={date_col: 'date', close_col: 'close'})
-            df['date'] = pd.to_datetime(df['date'])
-            price_dfs['Platinum'] = df[['date', 'close']].sort_values('date').set_index('date')
-            print(f"✓ Platinum 价格数据加载成功")
-    except Exception as e:
-        print(f"Platinum price failed: {e}")
 
     return price_dfs
 
