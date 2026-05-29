@@ -428,6 +428,12 @@ def generate_plots():
             col_suffix = f"{period}_Pct_OI_Percentile"
             if all(f"{cat}_{col_suffix}" not in period_df.columns or period_df[f"{cat}_{col_suffix}"].isna().all() for cat in CATEGORIES):
                 continue
+            latest_row = period_df.sort_values('Report_Date', ascending=False).head(1)
+            print(f"\n{metal} {period} 最新值检查:")
+            for cat in CATEGORIES:
+                c = f"{cat}_{col_suffix}"
+                if c in latest_row.columns:
+                    print(f"  {c} = {latest_row[c].iloc[0]:.2f}")
             draw_percentile_chart(metal, period_df, f"({period})", f"{period}_Percentiles", col_suffix=col_suffix)
     print("图表生成完成")
 
