@@ -365,7 +365,7 @@ def add_2014_2020_sheets(writer, all_data, price_dfs):
         print(f"{sheet_name} sheet 已生成")
 
 # ====================== 图表生成、回溯、当前分析、邮件（保持最新逻辑） ======================
-def draw_percentile_chart(metal, df, title_suffix, filename_suffix):
+def draw_percentile_chart(metal, df, title_suffix, filename_suffix, col_suffix="Pct_OI_Percentile"):
     fig, axes = plt.subplots(6, 1, figsize=(15, 26), sharex=True, gridspec_kw={'height_ratios': [1]*6})
     fig.suptitle(f"{metal} Percentiles & Spot Price {title_suffix}", fontsize=16, fontweight='bold')
     ax_price = axes[0]
@@ -375,9 +375,8 @@ def draw_percentile_chart(metal, df, title_suffix, filename_suffix):
         ax_price.grid(True, alpha=0.3)
     for i, cat in enumerate(CATEGORIES):
         ax = axes[i + 1]
-        cols_to_try = [f"{cat}_Pct_OI_Percentile", f"{cat}_Norm_Avg_Percentile", f"{cat}_Historical_Percentile"]
-        col = next((c for c in cols_to_try if c in df.columns and not df[c].isna().all()), None)
-        if col is None:
+        col = f"{cat}_{col_suffix}"
+        if col not in df.columns or df[col].isna().all():
             ax.text(0.5, 50, "No data", ha='center', va='center')
             continue
         colors = ['darkred' if v >= 80 else 'orange' if 50 <= v < 80 else 'blue' if 20 <= v < 50 else 'darkgreen' for v in df[col]]
@@ -426,10 +425,10 @@ def generate_plots():
             period_df = df[df['Report_Date'] >= period_start].copy()
             if len(period_df) < 10:
                 continue
-            pcols = [f"{cat}_{period}_Pct_OI_Percentile" for cat in CATEGORIES]
-            if all(c not in period_df.columns or period_df[c].isna().all() for c in pcols):
+            col_suffix = f"{period}_Pct_OI_Percentile"
+            if all(f"{cat}_{col_suffix}" not in period_df.columns or period_df[f"{cat}_{col_suffix}"].isna().all() for cat in CATEGORIES):
                 continue
-            draw_percentile_chart(metal, period_df, f"({period})", f"{period}_Percentiles")
+            draw_percentile_chart(metal, period_df, f"({period})", f"{period}_Percentiles", col_suffix=col_suffix)
     print("图表生成完成")
 
 def backtest_analysis():
