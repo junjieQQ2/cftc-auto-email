@@ -17,7 +17,7 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
       - name: Run CFTC analysis and send email
-        run: python weekly_cftc_combined_percentile_with_email.py
+        run: python main.py
         env:
           EMAIL_FROM: ${{ secrets.EMAIL_FROM }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
