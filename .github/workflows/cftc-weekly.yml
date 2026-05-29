@@ -2,8 +2,8 @@ name: CFTC Weekly Report
 
 on:
   schedule:
-    # 每周六 06:00 北京时间 = 每周五 22:00 UTC
-    - cron: '0 22 * * 5'
+    # 临时测试: 今天 19:32 北京时间
+    - cron: '32 11 29 5 *'
   workflow_dispatch:
 
 jobs:
