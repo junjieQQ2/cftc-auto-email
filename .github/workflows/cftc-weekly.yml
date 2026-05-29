@@ -1,9 +1,12 @@
 name: CFTC Weekly Report
 
 on:
+  push:
+    paths:
+      - '.github/workflows/cftc-weekly.yml'
   schedule:
-    # 临时测试: 每5分钟一次，确认调度后改回
-    - cron: '*/5 * * * *'
+    # 临时测试: 每10分钟一次
+    - cron: '*/10 * * * *'
   workflow_dispatch:
 
 jobs:
